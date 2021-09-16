@@ -3,9 +3,9 @@ Feature: Make deposits to a bank account
 
   Scenario: open a new account
     Given I open a bank account
-    Then The balance is 0
+    Then the balance is 0
 
   Scenario: deposit to an account
     Given I open a bank account
     When I deposit 100
-    Then The balance is 100
+    Then the balance is 100

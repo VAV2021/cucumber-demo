@@ -1,29 +1,30 @@
 Based on "10 Minute Tutorial" at Cucumber.io <https://cucumber.io/docs/guides/10-minute-tutorial/>
 
-Preliminary:
+### Preliminary Setup
 
 - install Gradle and verify that `gradle` is on your command search path
-- open a terminal or command window (Linux "shell")
-- create an empty product directory and chdir (`cd`) to the directory
+- in a terminal or command window, type `gradle --version`. This demo requires Gradle 6 or newer.
+- create an empty project directory and `cd` to that directory. I used "cucumber-demo" as the directory name.
 
-Steps
+### Demo Steps, Part 1
 
-1. Run `gradle init`. Choose:
-   * 2: application
+1. Using a terminal (command line) in an empty project directory, enter `gradle init`.    
+  In the "gradle init" dialog, choose:
+   * 2: application (the Project type)
    * 3: Java
-   * 1: no - only one application project
+   * 1: no - only one application in this project
    * 1: Groovy DSL
    * 1: JUnit 4
    * Project name: cucumber-demo (or whatever your directory name is)
    * Source package: **demo**
 
-2. Squash the "app" dir for simplicity. (Old versions of Gradle don't do this.)
-   * move everything in "app" to the project dir: `mv app/* .`
-   * remove the "app" dir: `rmdir app`
+2. Move contents of the "app" subdirectory to the project directory (as in older Gradle projects).
+   * enter: `mv app/* .`
+   * delete the "app" dir: `rmdir app`
    * edit `settings.gradle` and delete the line `include('app')`
 
-3. Edit `build.gradle`.  Add cucumber dependencies.    
-   These are from the Cucumber tutorial on Smartbear (reference below). JUnit is not really required to run Cucumber.
+3. Edit `build.gradle` and add cucumber dependencies.    
+   JUnit is not really required to run Cucumber, but we will use JUnit in this demo.
    ```
    dependencies {
        // Use JUnit test framework.
@@ -36,8 +37,8 @@ Steps
    }
    ```
 
-4. Also in `build.gradle` add cucumber task and configuration (I put these at the bottom of the file).
-   ```
+4. Also in `build.gradle` add cucumber task and configuration (at the end of the file).
+   ```groovy
    configurations {
        cucumberRuntime {
            extendsFrom testImplementation
@@ -47,58 +48,88 @@ Steps
    task cucumber() {
        dependsOn assemble, testClasses
        doLast {
-           javaexec {
-               main = "io.cucumber.core.cli.Main"
-               classpath = configurations.cucumberRuntime + sourceSets.main.output + sourceSets.test.output
-               args = ['--plugin', 'pretty', '--glue', 'demo', 'src/test/resources']
-               // args = ['--snippets', 'camelcase', '--plugin', 'pretty', '--glue', 'demo', 'src/test/resources']
-           }
+        javaexec {
+            main = "io.cucumber.core.cli.Main"
+            classpath = configurations.cucumberRuntime + sourceSets.main.output + sourceSets.test.output
+            args = ['--plugin', 'pretty', '--glue', 'demo', 'src/test/resources']
+            // other args = ['--snippets', 'camelcase']
+        }
        }
    }
    ```
 
-6. Verify that you have this directory: `src/test/resources`.  That directory is refereed to in the `javaexec` line above.
+6. Verify that you have this directory in our project: `src/test/resources`.   
+   This directory is where you put "feature" files and is referred to in the `javaexec` line above.
    - TODO  Explain what the javaexec command means
 
 7. Run `gradle cucumber`.  It should succeed.
-   * Windows Users: **Does the output show control characters?**
-   * Cucumber uses a lot of color. To show color in a terminal window it uses special character sequence. On some Windows version, the Command prompt does not process those control sequences so the output is unreadable.  There are 2 solutions:
-     1. Use the Git/Bash shell or any Bash for windows (MinGW).
-     2. In the `args` list of the `cucumber` task, add a `-m` argument.  `-m` means monochrome.
+   * Windows Users: On some Windows version, the output of cucmber shows character escape sequences instead of colored text.  There are 2 solutions to this:
+     1. Use the Git/Bash or Bash shell
+     2. In the `args` list of the `cucumber` task, add a `"-m"` argument (monochrome output).
 
-8. (Optional) To get rid of the verbose output about sharing code, create a file `src/test/resources/cucumber.properties` containing these lines:
+8. (Optional) To supress the verbose output about sharing code, create a file `src/test/resources/cucumber.properties` containing these lines:
    ```
    cucumber.publish.quiet=true
    # for Java, use camelcase method names in snippet code
    #cucumber.snippet-type=camelcase
    ```
 
-9. Create a feature file in src/test/resources/features (I think any directory inside of "resources" can be used. It does not need to match the package where your code will be.)
+9. Create a feature file in directory `src/test/resources/features` (the `resources` directory itself or any subdir can be used. This directory does not need to match the package where your code will be.)
    ```
    deposit_money.feature
    ```
 
-10. Put a feature and some scenarios in the feature file.
-   * The feature code is listed below.
+10. Write a feature and some scenarios in the deposit\_money.feature file:
+   ```gherkin
+    Feature: Make deposits and see the balance.
 
-11. Run `gradle cucumber` again.  Notice the messages and the suggested "glue" code.
+    Scenario: open a new account
+      Given I open a bank account
+      Then the balance is 0
 
-12. The "glue" code is using snake case (like Python). We want CamelCase, so edit build.gradle and add the option "--snippets camelcase" or uncomment this option in `cucumber.properties`.  But you have to add these as separate arguments in a list.
+    Scenario: deposit to an account
+      Given I open a bank account
+      When I deposit 100
+      Then the balance is 100
+   ```
 
-13. Run `gradle cucumber` again.
+11. Run `gradle cucumber` again.  This time is fails due to "Undefined scenarios".
+    Notice the output includes suggested "glue" code for each undefined "Step" in the Scenarios.  Here is glue code for the first step:
+   ```java
+    @Given("I open a bank account")
+    public void i_open_a_bank_account() {
+        // Write code here that turns the phrase above into concrete actions
+        throw new io.cucumber.java.PendingException();
+    }
+   ```
 
-14. Create a glue file (a Java class) in src/test/java/demo/
+12. This "glue" code is using snake case. For Java we should use CamelCase, Edit `src/test/resources/cucumber.properties` and uncomment the line:    
+`cucumber.snippet-type=camelcase`  
+    * Another solution is to edit `build.gradle` and add "--snippets", "camelcase" to the "args" list of the `javaexec` command. 
+
+13. Run `gradle cucumber` again. The code snippets should now use camelCase.    
+    **Copy the code snippets**. 
+
+14. Create a glue file (a Java class) in src/test/java/demo/ named `BankAccountTest.java`
     - Be sure to use the correct package name (`demo`).
-    - See example glue file below.
+    - See example [Java glue file below](#glue-code)
+
+15. (Optional) To verify that your Java code is correct, run `gradle build`. Otherwise, it will be built as part of the next step...
 
 15. Run `gradle cucumber` again.
-    - This time is should "match" the **Steps** in your feature file with Glue code using the annotation.
-    - But, the code throws a `PendingException`, which means that you did not write any useful glue code yet.
+    - This time is should match the **Steps** in your feature file with Glue code using the annotation.
+    - But, the glue code throws a `PendingException`, which means that you did not write any useful glue code yet.
 
-16. In the glue code `DepositTest.java` replace the PendingException lines with some System.out.println() commands.
-15. 
+16. In the glue code `BankAccountTest.java` replace the PendingException lines with some System.out.println() commands.  For example:
+    ```java
+    @Given("I open a bank account")
+    public void iOpenABankAccount() {
+        System.out.println("You opened a bank account.");
+    ```
 
-## Structure of your Project
+In the next part, we'll write code for the BankAccount class and use Glue Code to test the class.
+
+### Structure of your Project
 
 Now you should have a project structure like this:
 ```
@@ -116,16 +147,9 @@ src/
                  deposit_money.feature
                  (your feature files go here)
         /java/demo/
-                 (your "glue" code will go here)
+                 BankAccountTest.java
+                 (your "glue" code goes here)
 ```
-
-> **You Don't Need Gradle or Maven**
->
-> You can use Cucumber in any Java project.  It is instructive to use the CLI only.
-> However, you need to install the correct JAR files for Cucumber, Gherkin, 
-> and their dependencies, and setup a CLASSPATH for this project.
-
----
 
 ### Feature Files
 
@@ -136,74 +160,151 @@ Feature: Make deposits to a bank account
 
   Scenario: open a new account
     Given I open a bank account
-    Then The balance is 0
+    Then the balance is 0
 
   Scenario: deposit to an account
     Given I open a bank account
     When I deposit 100
-    Then The balance is 100
+    Then the balance is 100
 ```
 
-Later (really! don't add this the first time) add:
+Later add more scenarios, like this:
 ```gherkin
   Scenario: make several deposits to an account
     Given I open a bank account
     When I deposit 100
      And I deposit 30
      And I deposit 25
-    Then The balance is 155
+    Then the balance is 155
 ```
 
 
 ### Glue Code
 
-**Where to put the glue code?**  Your Glue Code files can have **any name**, but they should be in a package that cucumber is configured to look in.  In `build.gradle` we wrote that this package is "demo" (the `--glue` argument).
+**Where to put the glue code?**  Glue Code files can have **any name**, but they should be in a **package** that cucumber is configured to look in.  In `build.gradle` we wrote  (the `--glue` argument) that this package is "`demo`". Glue code can be in multiple packages or use a hierarchy of packages.
 
-Many Cucumber tutorials create a file named `StepDefinitions.java`. IntelliJ uses this name, too.  This is not necessary.
+Many Cucumber tutorials create a file named `StepDefinitions.java`. IntelliJ uses this name, too.  This name is not necessary.
 
-Your glue code will always include the `@Given`, `@When`, `@Then` annotations and may use others, so you will need the following imports:
-```java
-import io.cucumber.java.en.Given;
-import io.cucumber.java.en.Then;
-import io.cucumber.java.en.When;
-```
-"en" is for English language. You can use other languages, including Thai.
-
-The snippets are suggested by Cucumber.  You can modify the snippets as you like.  This is one possible change.
-
+Here is the glue code for the first two scenarios shown above:
 ```java
 package demo;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
-public class BankingTest {
+public class BankAccountTest {
     @Given("I open a bank account")
-    public void i_open_a_bank_account() {
+    public void iOpenABankAccount() {
         System.out.println("You opened a bank account.");
     }
     
-    @Then("The balance is {int}")
-    public void the_balance_is(Integer balance) {
+    @Then("the balance is {int}")
+    public void theBalanceIs(Integer balance) {
         System.out.printf("Your balance is %d\n", balance);
     }
     
     @When("I deposit {int}")
-    public void i_deposit(Integer amount) {
+    public void iDeposit(Integer amount) {
         System.out.printf("You deposited %d\n", amount);
     }
 }
 ```
+This code contains a few edits:
 
-## Add More Scenarios
+* Replaced `@PendingException` with System.out.println(...).
+* Add a `package`.
+* `import` cucumber annotations. You can also import "And" and "But", if desired.
+* Change the default parameter names (`int1`) to meaningful names.
 
-TODO
+## Demo Steps, Part 2
 
-## Write Source Code for BankAccount and Test it!
+Next, let's create a BankAccount class and test it. This is a lame model for a BankAccount (using "double" for money values and no transaction logging).
 
+![UML for BankAccount](images/BankAccount.png)
 
+`BankAccount.java` should be in the "main" source tree, `src/main/java/demo/BankAccount.java`.
+
+```java
+package demo;
+public class BankAccount {
+    private double balance;
+
+    /** Initialize a new BankAccount. */
+    public BankAccount() {
+        this.balance = 0;
+    }
+
+    /** Deposit money. */
+    public void deposit(double amount) {
+        this.balance += amount;
+    }
+
+    public double getBalance() {
+        return this.balance
+    }
+    //TODO write withdraw.
+    // return false if amount >= balance
+}
+```
+
+Run `gradle build` to check your code for syntax errors.
+
+Then, modify your glue code (BankAccountTest.java) to test the BankAccount.
+
+1. Import Junit for tests and add a BankAccount test fixture:
+   ```java
+   package demo;
+   import static org.junit.Assert.*;
+
+   public class BankAccountTest {
+       // fixture for tests
+       private BankAccount account;
+       // tolerance for comparing double values
+       private static final double TOL = 1.0E-4;
+
+       @Given("I open a bank account")
+       public void iOpenABankAccount() {
+           account = new BankAccount();
+       }
+    
+       @Then("the balance is {int}")
+       public void theBalanceIs(Integer balance) {
+           // assertEquals( expected, actual, tolerance)
+           assertEquals(balance, account.getBalance(), TOL);
+       }
+
+       //Todo: write the @When code for deposit
+   }
+   ```
+2. Compile and run with cucumber: `gradle cucumber`
+
+3. So we can verify the tests are performed, add a scenario that fails:
+   ```gherkin
+    Scenario Bank Account does not have free money
+      Given I open a bank account
+      Then the balance is 20
+    ```
+
+4. Compile and run this with Cucumber.  The new scenario should fail with an "assert" error from JUnit.
+
+### Next Step (on your own)
+
+1. Create a new feature file to test the withdraw behavior.  Write some scenarios for it.
+
+2. Add the glue code to BankAccountTest.java. 
+
+### You Don't Need Gradle or Maven to Use Cucumber
+
+It is instructive to use Cucumber with only the command line interface.
+You need a JDK or JRE and the Cucumber and Gherkin JARS,
+but do not need Gradle, Maven, or Ant.
+
+You can use Cucumber in any project in any supported language, including Ruby, Python, and PHP.
+
+---
 ### References
 
 * Cucumber Home <https://cucumber.io>
 * BDD: Automation Testing with Cucumber <https://www.bornfight.com/blog/behavior-driven-development-automation-testing-with-cucumber/>
 * Cucumber 10 Minute Tutorial <https://cucumber.io/docs/guides/10-minute-tutorial/#make-it-pass> shows how to configure Gradle for cucumber.
+* Introduction to Gherkin and writing feature files: <https://youtu.be/lC0jzd8sGIA>
